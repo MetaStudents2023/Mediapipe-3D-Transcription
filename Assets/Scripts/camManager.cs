@@ -6,11 +6,15 @@ public class camManager : MonoBehaviour
 {
     [SerializeField]
     private List<Camera> cameras;
-    private int indexActiveCamera;
+    public int indexActiveCamera;
+
+    private void Start()
+    {
+        ManageCamera();
+    }
 
     public void ManageCamera()
     {
-        indexActiveCamera++;
         if (indexActiveCamera >= cameras.Count)
         {
             indexActiveCamera = 0;
@@ -21,5 +25,6 @@ public class camManager : MonoBehaviour
             cameras[i].enabled = false;
         }
         cameras[indexActiveCamera].enabled = true;
+        indexActiveCamera++;
     }
 }

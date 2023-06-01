@@ -20,15 +20,15 @@ public class csvReader : MonoBehaviour
     private int frameWait = 0;
 
     [SerializeField]
-    private float offsetX, offsetY, offsetZ;
+    private float offsetX, offsetY, offsetZ, multiplicator;
 
     private int minFrameCount;
 
     // Start is called before the first frame update
     void Start()
     {
-        globalListCam4 = ReadCSVFile(@"C:\Users\lucas\Unity Projects\Exoscelette\Assets\CSV\output_cam_4.csv");
-        globalListCam3 = ReadCSVFile(@"C:\Users\lucas\Unity Projects\Exoscelette\Assets\CSV\output_cam_3.csv");
+        globalListCam4 = ReadCSVFile(@"..\Mediapipe-3D-Transcription-main\Assets\CSV\output_cam_4.csv");
+        globalListCam3 = ReadCSVFile(@"..\Mediapipe-3D-Transcription-main\Assets\CSV\output_cam_3.csv");
 
         if(globalListCam3.Count != globalListCam4.Count)
         {
@@ -104,7 +104,7 @@ public class csvReader : MonoBehaviour
             for(int i = 0; i < data_values.Length; i++)
             {
                 data_float[i] = float.Parse(data_values[i], CultureInfo.InvariantCulture.NumberFormat);
-                //data_float[i] *= 2.0f;
+                data_float[i] *= multiplicator;
             }
             
             pointList = new List<Vector3>();
