@@ -2,12 +2,15 @@ using System.Collections.Generic;
 using UnityEngine;
 using System.IO;
 using System.Globalization;
+using TMPro;
 
 public class csvReader : MonoBehaviour
 {
     private List<Vector3> pointList = new List<Vector3>();
     private List<GameObject> gameObjects = new List<GameObject>();
 
+    private List<List<Vector3>> globalListCam1;
+    private List<List<Vector3>> globalListCam2;
     private List<List<Vector3>> globalListCam3;
     private List<List<Vector3>> globalListCam4;
 
@@ -15,6 +18,9 @@ public class csvReader : MonoBehaviour
 
     [SerializeField]
     private GameObject prefabCube, prefabEmpty, prefabLine;
+
+    private GameObject lines, people;
+    private bool runExercice = false;
 
     private int indexFrame = 0;
     private int frameWait = 0;
@@ -24,61 +30,128 @@ public class csvReader : MonoBehaviour
 
     private int minFrameCount;
 
+    public string[] directories;
+    public string[] files;
+
+    [SerializeField]
+    private TMP_Dropdown dropdown;
+    [SerializeField]
+    private TMP_Text text;
+    private List<string> dropOptions = new List<string>();
+
     // Start is called before the first frame update
     void Start()
     {
-        globalListCam4 = ReadCSVFile(@"..\Mediapipe-3D-Transcription-main\Assets\CSV\output_cam_4.csv");
-        globalListCam3 = ReadCSVFile(@"..\Mediapipe-3D-Transcription-main\Assets\CSV\output_cam_3.csv");
+        directories = Directory.GetDirectories(@"..\Mediapipe-3D-Transcription-main\Assets\CSV");
 
-        if(globalListCam3.Count != globalListCam4.Count)
+        foreach (string dir in directories)
         {
-            if(globalListCam3.Count < globalListCam4.Count)
-            {
-                minFrameCount = globalListCam3.Count;
-            }
-            else
-            {
-                minFrameCount = globalListCam4.Count;
-            }
+            System.IO.FileInfo monDir = new System.IO.FileInfo(dir);
+            string name = monDir.Name;
+            dropOptions.Add(name);
         }
 
-        for(int n = 0; n < minFrameCount; n++)
-        {
-            for (int i = 0; i < pointList.Count; i++)
-            {
-                float newX = globalListCam4[n][i].x;
-                float newY = (globalListCam4[n][i].y + globalListCam3[n][i].y)/2;
-                float newZ = globalListCam3[n][i].x;
-
-                globalListCam4[n][i] = new Vector3(newX, newY, newZ);
-            }
-        }
-        
-        InstanciateCube();
-        InstanciateLines();
+        dropdown.ClearOptions();
+        dropdown.AddOptions(dropOptions);
+        OnDropDownChange();
     }
 
     // Update is called once per frame
     void Update()
     {
-        if(frameWait == 4)
+        if(runExercice)
         {
-            indexFrame++;
-
-            if (indexFrame >= minFrameCount)
+            if (frameWait == 4)
             {
-                indexFrame = 0;
-            }
+                indexFrame++;
 
-            for (int i = 0; i < pointList.Count; i++)
-            {
-                gameObjects[i].transform.position = globalListCam4[indexFrame][i];
+                if (indexFrame >= minFrameCount)
+                {
+                    indexFrame = 0;
+                }
+
+                for (int i = 0; i < pointList.Count; i++)
+                {
+                    gameObjects[i].transform.position = globalListCam4[indexFrame][i];
+                }
+
+                frameWait = 0;
             }
-            
-            frameWait = 0;
+            frameWait++;
         }
-        frameWait++;
+        
     }
+
+    public void OnDropDownChange()
+    {
+        Destroy(people);
+        Destroy(lines);
+        runExercice = false;
+
+        files = Directory.GetFiles(directories[dropdown.value], "*.csv");
+
+        if(files.Length == 4) 
+        {
+            foreach (string file in files)
+            {
+                System.IO.FileInfo monfile = new System.IO.FileInfo(file);
+                string name = monfile.Name;
+
+                char number = name[name.Length - 5];
+
+                switch (number)
+                {
+                    case '1':
+                        globalListCam1 = ReadCSVFile(monfile.FullName);
+                        break;
+                    case '2':
+                        globalListCam2 = ReadCSVFile(monfile.FullName);
+                        break;
+                    case '3':
+                        globalListCam3 = ReadCSVFile(monfile.FullName);
+                        break;
+                    case '4':
+                        globalListCam4 = ReadCSVFile(monfile.FullName);
+                        break;
+                }
+            }
+
+            if (globalListCam3.Count != globalListCam4.Count)
+            {
+                if (globalListCam3.Count < globalListCam4.Count)
+                {
+                    minFrameCount = globalListCam3.Count;
+                }
+                else
+                {
+                    minFrameCount = globalListCam4.Count;
+                }
+            }
+
+            for (int n = 0; n < minFrameCount; n++)
+            {
+                for (int i = 0; i < pointList.Count; i++)
+                {
+                    float newX = globalListCam4[n][i].x;
+                    float newY = (globalListCam4[n][i].y + globalListCam3[n][i].y) / 2;
+                    float newZ = globalListCam3[n][i].x;
+
+                    globalListCam4[n][i] = new Vector3(newX, newY, newZ);
+                }
+            }
+
+            InstanciateCube();
+            InstanciateLines();
+
+            runExercice = true;
+            text.text = dropdown.options[dropdown.value].text + " is running ...";
+        }
+        else
+        {
+            text.text = "Files missing for : " + dropdown.options[dropdown.value].text;
+        }
+    }
+
 
     public List<List<Vector3>> ReadCSVFile(string filename)
     {
@@ -119,16 +192,16 @@ public class csvReader : MonoBehaviour
             }
             globalList.Add(pointList);
         }
-        print(globalList.Count);
         return globalList;
     }
 
     void InstanciateCube()
     {
         // Instanciate all the cubes
-        GameObject people = Instantiate(prefabEmpty, new Vector3(0, 0, 0), Quaternion.identity);
+        people = Instantiate(prefabEmpty, new Vector3(0, 0, 0), Quaternion.identity);
         people.name = "People";
 
+        gameObjects.Clear();
         for (int i = 0; i < pointList.Count; i++)
         {
             GameObject cube = Instantiate(prefabCube, globalListCam4[0][i], Quaternion.identity);
@@ -141,7 +214,7 @@ public class csvReader : MonoBehaviour
     void InstanciateLines()
     {
         // Instanciate the lines
-        GameObject lines = Instantiate(prefabEmpty, new Vector3(0, 0, 0), Quaternion.identity);
+        lines = Instantiate(prefabEmpty, new Vector3(0, 0, 0), Quaternion.identity);
         lines.name = "Lines";
 
         for (int i = 0; i < 9; i++)
