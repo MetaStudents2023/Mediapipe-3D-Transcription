@@ -127,17 +127,14 @@ public class csvReader : MonoBehaviour
                         break;
                 }
             }
-
-            if (globalListCam3.Count != globalListCam4.Count)
+            
+            if (globalListCam3.Count < globalListCam4.Count)
             {
-                if (globalListCam3.Count < globalListCam4.Count)
-                {
-                    minFrameCount = globalListCam3.Count;
-                }
-                else
-                {
-                    minFrameCount = globalListCam4.Count;
-                }
+                minFrameCount = globalListCam3.Count;
+            }
+            else
+            {
+                minFrameCount = globalListCam4.Count;
             }
 
             for (int n = 0; n < minFrameCount; n++)
@@ -158,7 +155,6 @@ public class csvReader : MonoBehaviour
                         newY += offsetY;
 
                         newZ = globalListCam3[n][i].x;
-                        //newZ *= -1;
                         newZ *= multW;
                         newZ += offsetZ;
                     }
