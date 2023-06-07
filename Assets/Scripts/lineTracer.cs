@@ -60,7 +60,7 @@ public class lineTracer : MonoBehaviour
             float x = xScaled*radius;
             float y = yScaled*radius;
             
-            Vector3 currentPosition = new Vector3(gameObjects[0].transform.position.x, gameObjects[0].transform.position.y + y, gameObjects[0].transform.position.z +x);
+            Vector3 currentPosition = new Vector3(gameObjects[0].transform.position.x + x, gameObjects[0].transform.position.y + y, gameObjects[0].transform.position.z);
 
             lineRenderer.SetPosition(currentStep, currentPosition);
         }

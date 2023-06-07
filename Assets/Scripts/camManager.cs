@@ -1,16 +1,37 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Video;
 
 public class camManager : MonoBehaviour
 {
     [SerializeField]
     private List<Camera> cameras;
-    public int indexActiveCamera;
+    private int indexActiveCamera;
+
+    [SerializeField]
+    csvReader csvReader;
+
+    [SerializeField]
+    private VideoPlayer player;
+
+    private List<string> clipsList = new List<string>();
+
+    [SerializeField]
+    private GameObject missingFileLogo, videoPlace;
+
+    [SerializeField]
+    private int frameIndex, frameCount;
 
     private void Start()
     {
+        indexActiveCamera = 3;
         ManageCamera();
+    }
+    private void Update()
+    {
+        frameIndex = (int)player.frame;
+        frameCount = (int)player.frameCount;
     }
 
     public void ManageCamera()
@@ -24,7 +45,37 @@ public class camManager : MonoBehaviour
         {
             cameras[i].enabled = false;
         }
+
         cameras[indexActiveCamera].enabled = true;
+        
+        if(clipsList.Count > indexActiveCamera)
+        {
+            missingFileLogo.SetActive(false);
+            videoPlace.SetActive(true);
+            player.url = clipsList[indexActiveCamera];
+        }
+        else
+        {
+            missingFileLogo.SetActive(true);
+            videoPlace.SetActive(false);
+        }
         indexActiveCamera++;
+    }
+
+    public void SetClipsList(List<string> clipList)
+    {
+        this.clipsList = clipList;
+        indexActiveCamera = 3;
+        ManageCamera();
+    }
+
+    public int GetFrameIndex()
+    {
+        return this.frameIndex;
+    }
+
+    public int GetFrameCount()
+    {
+        return this.frameCount;
     }
 }

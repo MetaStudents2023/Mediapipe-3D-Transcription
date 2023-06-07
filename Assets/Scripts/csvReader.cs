@@ -3,6 +3,7 @@ using UnityEngine;
 using System.IO;
 using System.Globalization;
 using TMPro;
+using UnityEngine.UI;
 
 public class csvReader : MonoBehaviour
 {
@@ -14,30 +15,34 @@ public class csvReader : MonoBehaviour
     private List<List<Vector3>> globalListCam3;
     private List<List<Vector3>> globalListCam4;
 
-    private float xVal, yVal, zVal;
-
     [SerializeField]
     private GameObject prefabCube, prefabEmpty, prefabLine;
 
     private GameObject lines, people;
     private bool runExercice = false;
 
-    private int indexFrame = 0;
-    private int frameWait = 0;
+    [SerializeField]
+    private float offsetX, offsetY, offsetZ, multW, multH;
 
     [SerializeField]
-    private float offsetX, offsetY, offsetZ, multiplicator;
-
     private int minFrameCount;
 
-    public string[] directories;
-    public string[] files;
+    private string[] directories;
+    private string[] files;
+    private string[] videos;
 
     [SerializeField]
     private TMP_Dropdown dropdown;
     [SerializeField]
     private TMP_Text text;
     private List<string> dropOptions = new List<string>();
+
+    [SerializeField]
+    private camManager camManager;
+
+    [SerializeField]
+    private Toggle toggle;
+    private bool OneCSVmode = false;
 
     // Start is called before the first frame update
     void Start()
@@ -59,27 +64,33 @@ public class csvReader : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(runExercice)
+        int frameCountOnVideo = camManager.GetFrameCount();
+        int currentFrameOnVideo = camManager.GetFrameIndex();
+
+        if (runExercice)
         {
-            if (frameWait == 4)
+            int frameDiff = frameCountOnVideo - minFrameCount;
+            if(currentFrameOnVideo > frameDiff)
             {
-                indexFrame++;
-
-                if (indexFrame >= minFrameCount)
-                {
-                    indexFrame = 0;
-                }
-
                 for (int i = 0; i < pointList.Count; i++)
                 {
-                    gameObjects[i].transform.position = globalListCam4[indexFrame][i];
+                    gameObjects[i].transform.position = globalListCam4[currentFrameOnVideo-frameDiff][i];
                 }
-
-                frameWait = 0;
             }
-            frameWait++;
         }
-        
+    }
+
+    public void OnToggleChangeCSV()
+    {
+        if (toggle.isOn)
+        {
+            OneCSVmode = true;
+        }
+        else
+        {
+            OneCSVmode = false;
+        }
+        OnDropDownChange();
     }
 
     public void OnDropDownChange()
@@ -89,6 +100,7 @@ public class csvReader : MonoBehaviour
         runExercice = false;
 
         files = Directory.GetFiles(directories[dropdown.value], "*.csv");
+        
 
         if(files.Length == 4) 
         {
@@ -132,23 +144,65 @@ public class csvReader : MonoBehaviour
             {
                 for (int i = 0; i < pointList.Count; i++)
                 {
-                    float newX = globalListCam4[n][i].x;
-                    float newY = (globalListCam4[n][i].y + globalListCam3[n][i].y) / 2;
-                    float newZ = globalListCam3[n][i].x;
+                    float newX, newY, newZ;
+
+                    if (!OneCSVmode)
+                    {
+                        newX = globalListCam4[n][i].x;
+                        newX *= multW;
+                        newX += offsetX;
+
+                        newY = (globalListCam4[n][i].y + globalListCam3[n][i].y) / 2;
+                        newY *= -1;
+                        newY *= multH;
+                        newY += offsetY;
+
+                        newZ = globalListCam3[n][i].x;
+                        //newZ *= -1;
+                        newZ *= multW;
+                        newZ += offsetZ;
+                    }
+                    else
+                    {
+                        newX = globalListCam4[n][i].x;
+                        newY = globalListCam4[n][i].y;
+                        newZ = globalListCam4[n][i].z;
+                    }
+                    
 
                     globalListCam4[n][i] = new Vector3(newX, newY, newZ);
                 }
             }
 
+            videos = Directory.GetFiles(directories[dropdown.value], "*.mp4");
+            List<string> list = new List<string>();
+
+            if (videos.Length == 4)
+            {
+                foreach (string video in videos)
+                {
+                    System.IO.FileInfo myvideo = new System.IO.FileInfo(video);
+
+                    list.Add(myvideo.FullName);
+                }
+                runExercice = true;
+            }
+            else { runExercice = false; }
+
+            camManager.SetClipsList(list);
+        }
+        else { runExercice = false; }
+
+        if (runExercice)
+        {
             InstanciateCube();
             InstanciateLines();
-
-            runExercice = true;
             text.text = dropdown.options[dropdown.value].text + " is running ...";
         }
         else
         {
             text.text = "Files missing for : " + dropdown.options[dropdown.value].text;
+            camManager.SetClipsList(new List<string>());
         }
     }
 
@@ -177,18 +231,14 @@ public class csvReader : MonoBehaviour
             for(int i = 0; i < data_values.Length; i++)
             {
                 data_float[i] = float.Parse(data_values[i], CultureInfo.InvariantCulture.NumberFormat);
-                data_float[i] *= multiplicator;
+                //data_float[i] *= multiplicator;
             }
             
             pointList = new List<Vector3>();
 
             for (int i = 0; i < data_values.Length; i += 3)
             {
-                xVal = offsetX + data_float[i];
-                yVal = offsetY + data_float[i + 1] * -1;
-                zVal = offsetZ + data_float[i + 2] * -1;
-
-                pointList.Add(new Vector3(xVal, yVal, zVal));
+                pointList.Add(new Vector3(data_float[i], data_float[i + 1], data_float[i + 2]));
             }
             globalList.Add(pointList);
         }
