@@ -146,17 +146,8 @@ public class csvReader : MonoBehaviour
                     if (!OneCSVmode)
                     {
                         newX = globalListCam4[n][i].x;
-                        newX *= multW;
-                        newX += offsetX;
-
-                        newY = (globalListCam4[n][i].y + globalListCam3[n][i].y) / 2;
-                        newY *= -1;
-                        newY *= multH;
-                        newY += offsetY;
-
+                        newY = globalListCam4[n][i].y;
                         newZ = globalListCam3[n][i].x;
-                        newZ *= multW;
-                        newZ += offsetZ;
                     }
                     else
                     {
@@ -164,7 +155,13 @@ public class csvReader : MonoBehaviour
                         newY = globalListCam4[n][i].y;
                         newZ = globalListCam4[n][i].z;
                     }
-                    
+
+                    newX *= multW;
+                    newX += offsetX;
+                    newY *= multH;
+                    newY += offsetY;
+                    newZ *= multW;
+                    newZ += offsetZ;
 
                     globalListCam4[n][i] = new Vector3(newX, newY, newZ);
                 }

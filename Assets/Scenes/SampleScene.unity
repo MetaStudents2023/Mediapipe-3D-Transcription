@@ -1544,10 +1544,10 @@ MonoBehaviour:
   prefabEmpty: {fileID: 1856636315290261747, guid: f40a40880deac6b47aa5023f55ac56a2, type: 3}
   prefabLine: {fileID: 2393243946496338530, guid: 71da7aab907d17c46b26194124ada80d, type: 3}
   offsetX: -2.26
-  offsetY: 1.29
+  offsetY: 1.35
   offsetZ: -2.56
   multW: 4.52
-  multH: 2.58
+  multH: -2.58
   minFrameCount: 0
   dropdown: {fileID: 1798830924}
   text: {fileID: 373345193}
