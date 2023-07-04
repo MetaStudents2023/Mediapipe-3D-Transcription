@@ -23,6 +23,9 @@ public class camManager : MonoBehaviour
     [SerializeField]
     private int frameIndex, frameCount;
 
+    [SerializeField]
+    private Material citySkybox, snowSkybox;
+
     private void Start()
     {
         indexActiveCamera = 3;
@@ -69,6 +72,17 @@ public class camManager : MonoBehaviour
         ManageCamera();
     }
 
+    public void changeSkyBox(string skyBox)
+    {
+        if(skyBox == "city")
+        {
+            RenderSettings.skybox = citySkybox;
+        }
+        if(skyBox == "snow")
+        {
+            RenderSettings.skybox = snowSkybox;
+        }
+    }
     public int GetFrameIndex()
     {
         return this.frameIndex;

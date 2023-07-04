@@ -52,6 +52,8 @@ public class csvReader : MonoBehaviour
     [SerializeField]
     private camManager camManager;
 
+    int n = 1;
+
     // Start is called before the first frame update
     void Start()
     {
@@ -107,20 +109,41 @@ public class csvReader : MonoBehaviour
             #endif
         }
 
-        int frameCountOnVideo = camManager.GetFrameCount();
-        int currentFrameOnVideo = camManager.GetFrameIndex();
-
-        if (runExercice)
+        if (mediapipeOrXsense)
         {
-            int frameDiff = frameCountOnVideo - minFrameCount;
-            if(currentFrameOnVideo > frameDiff)
+            int frameCountOnVideo = camManager.GetFrameCount();
+            int currentFrameOnVideo = camManager.GetFrameIndex();
+
+            if (runExercice)
             {
-                for (int i = 0; i < pointList.Count; i++)
+                int frameDiff = frameCountOnVideo - minFrameCount;
+                if (currentFrameOnVideo > frameDiff)
                 {
-                    gameObjects[i].transform.position = globalListCam4[currentFrameOnVideo-frameDiff][i];
+                    for (int i = 0; i < pointList.Count; i++)
+                    {
+                        gameObjects[i].transform.position = globalListCam4[currentFrameOnVideo - frameDiff][i];
+                    }
                 }
             }
         }
+
+        else
+        {
+            if(n>=globalListXsense.Count-1)
+            {
+                n = 1;
+            }
+            else
+            {
+                n++;
+            }
+
+            for(int i = 0; i <pointList.Count; i++)
+            {
+                gameObjects[i].transform.position = globalListXsense[n][i];
+            }
+        }
+        
     }
 
     public void OnClickMediapipeBtn()
@@ -192,13 +215,13 @@ public class csvReader : MonoBehaviour
                 switch (number)
                 {
                     case '1':
-                        globalListCam1 = ReadCSVFile(monfile.FullName, false);
+                        globalListCam1 = ReadCSVFile(monfile.FullName);
                         break;
                     case '2':
-                        globalListCam2 = ReadCSVFile(monfile.FullName, false);
+                        globalListCam2 = ReadCSVFile(monfile.FullName);
                         break;
                     case '3':
-                        globalListCam3 = ReadCSVFile(monfile.FullName, false);
+                        globalListCam3 = ReadCSVFile(monfile.FullName);
                         break;
                     case '4':
                         globalListCam4 = ReadCSVFile(monfile.FullName, true);
@@ -254,21 +277,10 @@ public class csvReader : MonoBehaviour
 
             camManager.SetClipsList(list);
 
-            if (runExercice)
-            {
-                InstanciateCube();
-                InstanciateLines();
-                text.text = dropdownMediapipe.options[dropdownMediapipe.value].text + " is running";
-            }
-            else
-            {
-                text.text = "Files missing for : " + dropdownMediapipe.options[dropdownMediapipe.value].text;
-                camManager.SetClipsList(new List<string>());
-            }
+            
         }
         else    // Xsense loading
         {
-            print("XSENSE");
             files = Directory.GetFiles(XsenseDr[dropDownXsense.value], "*.csv");
 
             foreach (string file in files)
@@ -278,15 +290,44 @@ public class csvReader : MonoBehaviour
 
                 if(name == "CIIRC_Emilio-055_positions.csv")
                 {
-                    print(name + " reading");
-                    globalListXsense = ReadCSVFile(monfile.FullName, false);
+                    globalListXsense = ReadCSVFile(monfile.FullName);
                 }
             }
+
+            for(int i=1; i<globalListXsense.Count; i++)
+            {
+                for(int n=0; n < globalListXsense[i].Count; n++) 
+                {
+                    globalListXsense[i][n] = new Vector3(globalListXsense[i][n].x - 2, globalListXsense[i][n].y, globalListXsense[i][n].z + 8);
+                }
+            }
+
+            InstanciateCube();
+        }
+
+        if (runExercice)
+        {
+            InstanciateCube();
+            InstanciateLines();
+            text.text = dropdownMediapipe.options[dropdownMediapipe.value].text + " is running";
+        }
+        else
+        {
+            if (mediapipeOrXsense)
+            {
+                text.text = "Videos missing for : " + dropdownMediapipe.options[dropdownMediapipe.value].text;
+            }
+            else
+            {
+                text.text = "Videos missing for : " + dropDownXsense.options[dropDownXsense.value].text;
+            }
+            
+            camManager.SetClipsList(new List<string>());
         }
     }
 
 
-    public List<List<Vector3>> ReadCSVFile(string filename, bool takeMinY)
+    public List<List<Vector3>> ReadCSVFile(string filename, bool takeMinY = false)
     {
         StreamReader strReader = new StreamReader(filename);
         List<List<Vector3>> globalList = new List<List<Vector3>>();
@@ -310,26 +351,49 @@ public class csvReader : MonoBehaviour
             }
 
             string[] data_values = data_string.Split(',');
-            float[] data_float = new float[data_values.Length];
+            float[] data_float;
 
-            for(int i = 0; i < data_values.Length; i++)
+            if (mediapipeOrXsense)
             {
-                data_float[i] = float.Parse(data_values[i], CultureInfo.InvariantCulture.NumberFormat);
-                //data_float[i] *= multiplicator;
+                data_float = new float[data_values.Length];
+
+                for (int i = 0; i < data_values.Length; i++)
+                {
+                    data_float[i] = float.Parse(data_values[i], CultureInfo.InvariantCulture.NumberFormat);
+                    //data_float[i] *= multiplicator;
+                }
             }
-            
+            else
+            {
+                data_float = new float[data_values.Length-1];
+
+                for (int i = 1; i < data_values.Length; i++)
+                {
+                    data_float[i-1] = float.Parse(data_values[i], CultureInfo.InvariantCulture.NumberFormat);
+                }
+            }
+
             pointList = new List<Vector3>();
-            
-            for (int i = 0; i < data_values.Length; i += 3)
+
+            for (int i = 0; i < data_float.Length; i += 3)
             {
                 if (takeMinY)
                 {
                     listForMinY.Add(data_float[i + 1]);
                 }
-                pointList.Add(new Vector3(data_float[i], data_float[i + 1], data_float[i + 2]));
+                if (mediapipeOrXsense)
+                {
+                    pointList.Add(new Vector3(data_float[i], data_float[i + 1], data_float[i + 2]));
+                }
+                else
+                {
+                    pointList.Add(new Vector3(data_float[i], data_float[i + 2], data_float[i + 1]));
+                }
+                
             }
             globalList.Add(pointList);
         }
+
         return globalList;
     }
 
@@ -342,7 +406,16 @@ public class csvReader : MonoBehaviour
         gameObjects.Clear();
         for (int i = 0; i < pointList.Count; i++)
         {
-            GameObject cube = Instantiate(prefabCube, globalListCam4[0][i], Quaternion.identity);
+            GameObject cube;
+            if (mediapipeOrXsense)
+            {
+                cube = Instantiate(prefabCube, globalListCam4[0][i], Quaternion.identity);
+            }
+            else
+            {
+                cube = Instantiate(prefabCube, globalListXsense[1][i], Quaternion.identity);
+            }
+
             cube.transform.SetParent(people.transform);
             cube.name = i.ToString();
             gameObjects.Add(cube);
