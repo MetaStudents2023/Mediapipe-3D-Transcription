@@ -3,10 +3,14 @@ using UnityEngine;
 using System.IO;
 using System.Globalization;
 using TMPro;
+using System.Linq;
 using UnityEngine.UI;
+using System;
+using UnityEditor;
 
 public class csvReader : MonoBehaviour
 {
+    [SerializeField]
     private List<Vector3> pointList = new List<Vector3>();
     private List<GameObject> gameObjects = new List<GameObject>();
 
@@ -14,6 +18,10 @@ public class csvReader : MonoBehaviour
     private List<List<Vector3>> globalListCam2;
     private List<List<Vector3>> globalListCam3;
     private List<List<Vector3>> globalListCam4;
+
+    private List<List<Vector3>> globalListXsense;
+
+    private List<float> listForMinY;
 
     [SerializeField]
     private GameObject prefabCube, prefabEmpty, prefabLine;
@@ -27,12 +35,16 @@ public class csvReader : MonoBehaviour
     [SerializeField]
     private int minFrameCount;
 
-    private string[] directories;
-    private string[] files;
-    private string[] videos;
+    private string[] MediapipeDr, XsenseDr, files, videos;
 
     [SerializeField]
-    private TMP_Dropdown dropdown;
+    private TMP_Dropdown dropdownMediapipe, dropdownMediapipeVR, dropDownXsense, dropDownXsenseVR;
+
+    [SerializeField]
+    private Button mediapipeBtn, xsenseBtn, mediapipeBtnVR, xsenseBtnVR;
+    public Color darkgreen;
+    private bool mediapipeOrXsense = true; // true for mediapipe - false for xsense
+
     [SerializeField]
     private TMP_Text text;
     private List<string> dropOptions = new List<string>();
@@ -40,30 +52,61 @@ public class csvReader : MonoBehaviour
     [SerializeField]
     private camManager camManager;
 
-    [SerializeField]
-    private Toggle toggle;
-    private bool OneCSVmode = false;
-
     // Start is called before the first frame update
     void Start()
     {
-        directories = Directory.GetDirectories(@"..\Mediapipe-3D-Transcription-main\Assets\CSV");
+        try
+        {
+            MediapipeDr = Directory.GetDirectories(@"..\Assets\Data\Mediapipe");
+            XsenseDr = Directory.GetDirectories(@"..\Assets\Data\Xsense");
+        }
+        catch (Exception e)
+        {
+            MediapipeDr = Directory.GetDirectories(@"Assets\Data\Mediapipe");
+            XsenseDr = Directory.GetDirectories(@"Assets\Data\Xsense");
+        }
 
-        foreach (string dir in directories)
+        foreach (string dir in MediapipeDr)
         {
             System.IO.FileInfo monDir = new System.IO.FileInfo(dir);
             string name = monDir.Name;
             dropOptions.Add(name);
         }
+        dropdownMediapipeVR.ClearOptions();
+        dropdownMediapipeVR.AddOptions(dropOptions);
 
-        dropdown.ClearOptions();
-        dropdown.AddOptions(dropOptions);
-        OnDropDownChange();
+        dropdownMediapipe.ClearOptions();
+        dropdownMediapipe.AddOptions(dropOptions);
+
+        dropOptions.Clear();
+
+        foreach (string dir in XsenseDr)
+        {
+            System.IO.FileInfo monDir = new System.IO.FileInfo(dir);
+            string name = monDir.Name;
+            dropOptions.Add(name);
+        }
+        dropDownXsenseVR.ClearOptions();
+        dropDownXsenseVR.AddOptions(dropOptions);
+
+        dropDownXsense.ClearOptions();
+        dropDownXsense.AddOptions(dropOptions);
+
+        UpdateExercice();
     }
 
     // Update is called once per frame
     void Update()
     {
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            #if UNITY_EDITOR
+                EditorApplication.isPlaying = false;
+            #else
+                Application.Quit();
+            #endif
+        }
+
         int frameCountOnVideo = camManager.GetFrameCount();
         int currentFrameOnVideo = camManager.GetFrameIndex();
 
@@ -80,30 +123,65 @@ public class csvReader : MonoBehaviour
         }
     }
 
-    public void OnToggleChangeCSV()
+    public void OnClickMediapipeBtn()
     {
-        if (toggle.isOn)
-        {
-            OneCSVmode = true;
-        }
-        else
-        {
-            OneCSVmode = false;
-        }
-        OnDropDownChange();
+        mediapipeOrXsense = true;
+        
+        xsenseBtn.GetComponent<Image>().color = Color.black;
+        xsenseBtnVR.GetComponent<Image>().color = Color.black;
+        mediapipeBtn.GetComponent<Image>().color = darkgreen;
+        mediapipeBtnVR.GetComponent<Image>().color = darkgreen;
+        
+        dropdownMediapipe.gameObject.SetActive(true);
+        dropDownXsense.gameObject.SetActive(false);
+        dropdownMediapipeVR.gameObject.SetActive(true);
+        dropDownXsenseVR.gameObject.SetActive(false);
+
+        UpdateExercice();
+    }
+
+    public void OnClickXsenseBtn()
+    {
+        mediapipeOrXsense = false;
+        
+        mediapipeBtn.GetComponent<Image>().color = Color.black;
+        xsenseBtn.GetComponent<Image>().color = darkgreen;
+        mediapipeBtnVR.GetComponent<Image>().color = Color.black;
+        xsenseBtnVR.GetComponent<Image>().color = darkgreen;
+
+        dropdownMediapipe.gameObject.SetActive(false);
+        dropDownXsense.gameObject.SetActive(true);
+        dropdownMediapipeVR.gameObject.SetActive(false);
+        dropDownXsenseVR.gameObject.SetActive(true);
+
+        UpdateExercice();
+    }
+
+
+    public void OnVRDropDownChange()
+    {
+        dropdownMediapipe.value = dropdownMediapipeVR.value;
+        dropdownMediapipe.RefreshShownValue();
+        UpdateExercice();
     }
 
     public void OnDropDownChange()
+    {
+        dropdownMediapipeVR.value = dropdownMediapipe.value;
+        dropdownMediapipeVR.RefreshShownValue();
+        UpdateExercice();
+    }
+
+    public void UpdateExercice()
     {
         Destroy(people);
         Destroy(lines);
         runExercice = false;
 
-        files = Directory.GetFiles(directories[dropdown.value], "*.csv");
-        
-
-        if(files.Length == 4) 
+        if (mediapipeOrXsense)
         {
+            files = Directory.GetFiles(MediapipeDr[dropdownMediapipe.value], "*.csv");
+
             foreach (string file in files)
             {
                 System.IO.FileInfo monfile = new System.IO.FileInfo(file);
@@ -114,20 +192,20 @@ public class csvReader : MonoBehaviour
                 switch (number)
                 {
                     case '1':
-                        globalListCam1 = ReadCSVFile(monfile.FullName);
+                        globalListCam1 = ReadCSVFile(monfile.FullName, false);
                         break;
                     case '2':
-                        globalListCam2 = ReadCSVFile(monfile.FullName);
+                        globalListCam2 = ReadCSVFile(monfile.FullName, false);
                         break;
                     case '3':
-                        globalListCam3 = ReadCSVFile(monfile.FullName);
+                        globalListCam3 = ReadCSVFile(monfile.FullName, false);
                         break;
                     case '4':
-                        globalListCam4 = ReadCSVFile(monfile.FullName);
+                        globalListCam4 = ReadCSVFile(monfile.FullName, true);
                         break;
                 }
             }
-            
+
             if (globalListCam3.Count < globalListCam4.Count)
             {
                 minFrameCount = globalListCam3.Count;
@@ -137,24 +215,17 @@ public class csvReader : MonoBehaviour
                 minFrameCount = globalListCam4.Count;
             }
 
+            offsetY = listForMinY.Max() * multH * -1.0f;
+
             for (int n = 0; n < minFrameCount; n++)
             {
                 for (int i = 0; i < pointList.Count; i++)
                 {
                     float newX, newY, newZ;
 
-                    if (!OneCSVmode)
-                    {
-                        newX = globalListCam4[n][i].x;
-                        newY = globalListCam4[n][i].y;
-                        newZ = globalListCam3[n][i].x;
-                    }
-                    else
-                    {
-                        newX = globalListCam4[n][i].x;
-                        newY = globalListCam4[n][i].y;
-                        newZ = globalListCam4[n][i].z;
-                    }
+                    newX = globalListCam4[n][i].x;
+                    newY = (globalListCam4[n][i].y + globalListCam3[n][i].y) / 2;
+                    newZ = globalListCam3[n][i].x;
 
                     newX *= multW;
                     newX += offsetX;
@@ -167,7 +238,7 @@ public class csvReader : MonoBehaviour
                 }
             }
 
-            videos = Directory.GetFiles(directories[dropdown.value], "*.mp4");
+            videos = Directory.GetFiles(MediapipeDr[dropdownMediapipe.value], "*.mp4");
             List<string> list = new List<string>();
 
             if (videos.Length == 4)
@@ -175,7 +246,6 @@ public class csvReader : MonoBehaviour
                 foreach (string video in videos)
                 {
                     System.IO.FileInfo myvideo = new System.IO.FileInfo(video);
-
                     list.Add(myvideo.FullName);
                 }
                 runExercice = true;
@@ -183,29 +253,50 @@ public class csvReader : MonoBehaviour
             else { runExercice = false; }
 
             camManager.SetClipsList(list);
-        }
-        else { runExercice = false; }
 
-        if (runExercice)
-        {
-            InstanciateCube();
-            InstanciateLines();
-            text.text = dropdown.options[dropdown.value].text + " is running ...";
+            if (runExercice)
+            {
+                InstanciateCube();
+                InstanciateLines();
+                text.text = dropdownMediapipe.options[dropdownMediapipe.value].text + " is running";
+            }
+            else
+            {
+                text.text = "Files missing for : " + dropdownMediapipe.options[dropdownMediapipe.value].text;
+                camManager.SetClipsList(new List<string>());
+            }
         }
-        else
+        else    // Xsense loading
         {
-            text.text = "Files missing for : " + dropdown.options[dropdown.value].text;
-            camManager.SetClipsList(new List<string>());
+            print("XSENSE");
+            files = Directory.GetFiles(XsenseDr[dropDownXsense.value], "*.csv");
+
+            foreach (string file in files)
+            {
+                System.IO.FileInfo monfile = new System.IO.FileInfo(file);
+                string name = monfile.Name;
+
+                if(name == "CIIRC_Emilio-055_positions.csv")
+                {
+                    print(name + " reading");
+                    globalListXsense = ReadCSVFile(monfile.FullName, false);
+                }
+            }
         }
     }
 
 
-    public List<List<Vector3>> ReadCSVFile(string filename)
+    public List<List<Vector3>> ReadCSVFile(string filename, bool takeMinY)
     {
         StreamReader strReader = new StreamReader(filename);
         List<List<Vector3>> globalList = new List<List<Vector3>>();
         
         bool endOfFile = false;
+        if(takeMinY)
+        {
+            listForMinY = new List<float>();
+        }
+        
 
         while (!endOfFile)
         {
@@ -228,9 +319,13 @@ public class csvReader : MonoBehaviour
             }
             
             pointList = new List<Vector3>();
-
+            
             for (int i = 0; i < data_values.Length; i += 3)
             {
+                if (takeMinY)
+                {
+                    listForMinY.Add(data_float[i + 1]);
+                }
                 pointList.Add(new Vector3(data_float[i], data_float[i + 1], data_float[i + 2]));
             }
             globalList.Add(pointList);
